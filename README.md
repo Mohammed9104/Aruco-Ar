@@ -1,1 +1,1 @@
-# Aruco-Ar
+# Aruco Generator and Detector
