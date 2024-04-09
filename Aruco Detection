@@ -1,0 +1,71 @@
+import numpy as np
+import time
+import cv2
+
+# Dictionary containing ArUco marker types
+ARUCO_DICT = {
+    "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
+    "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
+    # ... other marker types ...
+    "DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
+}
+
+# Function to display ArUco markers on the image
+def aruco_display(corners, ids, rejected, image):
+    if len(corners) > 0:
+        ids = ids.flatten()
+        for (markerCorner, markerID) in zip(corners, ids):
+            corners = markerCorner.reshape((4, 2))
+            (topLeft, topRight, bottomRight, bottomLeft) = corners
+            # Draw marker boundaries
+            cv2.line(image, topLeft, topRight, (0, 255, 0), 2)
+            cv2.line(image, topRight, bottomRight, (0, 255, 0), 2)
+            cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 2)
+            cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 2)
+            # Calculate marker center and draw circle
+            cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+            cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+            cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
+            # Put marker ID on the image
+            cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 255, 0), 2)
+            print("[Inference] ArUco marker ID: {}".format(markerID))
+    return image
+
+# Define the type of ArUco markers to detect
+aruco_type = "DICT_5X5_100"
+
+# Get the dictionary of ArUco markers
+arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
+
+# Set detection parameters
+arucoParams = cv2.aruco.DetectorParameters_create()
+
+# Open the camera
+cap = cv2.VideoCapture(0)
+
+# Set camera resolution
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+# Main loop to detect ArUco markers in each frame
+while cap.isOpened():
+    ret, img = cap.read()
+    h, w, _ = img.shape
+    # Resize image
+    width = 1000
+    height = int(width*(h/w))
+    img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
+    # Detect markers
+    corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
+    # Display detected markers
+    detected_markers = aruco_display(corners, ids, rejected, img)
+    cv2.imshow("Image", detected_markers)
+    # Check for quit key
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        break
+
+# Release resources
+cv2.destroyAllWindows()
+cap.release()
